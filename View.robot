@@ -128,7 +128,7 @@ aps.Отримати інформацію із тендера
 
 Отримати інформацію про items[0].additionalClassifications[0].scheme
     ${return_value}=    Отримати текст із поля і показати на сторінці    items[0].additionalClassifications[0].scheme
-    ${return_value}=    Replace String    ${return_value}    016:2010    ДКПП
+    ${return_value}=    Replace String    ${return_value}    ДК 016:2010    ДКПП
     [Return]    ${return_value}
 
 Отримати інформацію про items[0].additionalClassifications[0].id

@@ -6,8 +6,8 @@ Library           Collections
 Library           Screenshot
 Resource          APStender_subkeywords.robot
 Library           aps_service.py
-Resource          View.robot
 Resource          Locators.robot
+Resource          View.robot
 
 *** Keywords ***
 Підготувати дані для оголошення тендера
@@ -33,38 +33,39 @@ Resource          Locators.robot
     Return From Keyword If    '${ARGUMENTS[0]}' != 'aps_Owner'
     ${tender_data}=    Get From Dictionary    ${ARGUMENTS[1]}    data
     #
-    WaitClickXPATH    ${locator.buttonAdd}
-    WaitClickXPATH    ${locator.buttonTenderAdd}
+    Click Element    ${locator.buttonAdd}
+    Wait Until Page Contains Element    ${locator.buttonTenderAdd}
+    Click Element    ${locator.buttonTenderAdd}
     TenderInfo    ${tender_data}
     \    #
-    Run Keyword And Ignore Error    WaitClickXPATH    .//div[@class="btn-group"]/label[2]
+    Run Keyword If    '${TEST NAME}' == 'Можливість оголосити мультилотовий тендер'    Click Element    css=label.btn.btn-info
     Заповнити дати тендеру    ${tender_data.enquiryPeriod}    ${tender_data.tenderPeriod}
     \    #
     Execute Javascript    window.scroll(1500,1500)
     sleep    3
-    WaitClickID    ${locator.tenderAdd}
+    Click Button    ${locator.tenderAdd}
     \    #
-    Execute Javascript    window.scroll(1500,1500)
     ${items}=    Get From Dictionary    ${tender_data}    items
     Run Keyword If    '${TEST NAME}' == 'Можливість оголосити однопредметний тендер'    Додати предмет    ${items[0]}    0
-    Run Keyword If    '${mode}' == 'Можливість оголосити багатопредметний тендер'    Додати багато предметів    ${items}
-    #Run Keyword If    ${number_of_lots} > 0    Додати багато лотів    ${tender_data}
+    Run Keyword If    '${TEST NAME}' == 'Можливість оголосити багатопредметний тендер'    Додати багато предметів    ${items}
+    Run Keyword If    '${TEST NAME}' == 'Можливість оголосити мультилотовий тендер'    Додати багато лотів    ${tender_data}
     \    #    #
     ${tender_UAid}=    Опублікувати тендер
+    Reload Page
     [Return]    ${tender_UAid}
 
 Завантажити документ
     [Arguments]    ${username}    ${filepath}    ${tender_UAid}
     aps.Пошук тендера по ідентифікатору    ${username}    ${tender_UAid}
-    WaitClickID    ButtonTenderEdit
-    Execute Javascript    window.scroll(1500,1500)
-    WaitClickID    addFile
-    Select From List By Label    category_of    Документи закупівлі
+    Click Button    ButtonTenderEdit
+    Click Element    addFile
+    Select From List By Label    category_of    Тендерна документація
     Select From List By Label    file_of    закупівлі
-    WaitInputID    TenderFileUpload    ${filepath}
-    WaitClickID    lnkDownload
+    InputText    TenderFileUpload    ${filepath}
+    Screenshot.Take Screenshot
+    Click Link    lnkDownload
     Wait Until Element Is Enabled    addFile
-    WaitClickID    id=btnPublishTop
+    Click Element    id=btnPublishTop
 
 Завантажити документ в лот
     [Arguments]    ${username}    ${filepath}    ${TENDER_UAID}    ${lot_id}
@@ -72,7 +73,7 @@ Resource          Locators.robot
     Log To Console    ${filepath}
     Click Button    ButtonTenderEdit
     Click Element    addFile
-    Select From List By Label    category_of    Документи закупівлі
+    Select From List By Label    category_of    Тендерна документація
     Select From List By Label    file_of    лоту
     Wait Until Element Is Enabled    id=FileComboSelection2
     Log To Console    ${lot_id}
@@ -85,13 +86,17 @@ Resource          Locators.robot
     [Arguments]    ${username}    ${tender_UAid}
     [Documentation]    ${ARGUMENTS[0]} == username
     ...    ${ARGUMENTS[1]} == tenderId
-    Run Keyword If    '${TEST NAME}' == 'Можливість знайти однопредметний тендер по ідентифікатору'    Sleep    180
+    Log To Console    tender ID SEARCH
+    Run Keyword If    '${TEST NAME}' == 'Можливість знайти однопредметний тендер по ідентифікатору'    Run Keyword If    '${username}' != 'aps_Owner'    Sleep    120
+    Run Keyword If    '${TEST NAME}' == 'Можливість відповісти на запитання'     Sleep    120
     Run Keyword If    '${username}' == 'aps_Viewer'    Go To    ${USERS.users['${username}'].homepage}/#testmodeOn    #SearchIdViewer    ${tender_UAid}    ${username}
     Run Keyword Unless    '${username}' == 'aps_Viewer'    Go To    ${USERS.users['${username}'].homepage}
     WaitInputXPATH    //input[@id='search_text']    ${tender_UAid}
+    Log To Console    'search_text - '+ ${tender_UAid}
     WaitClickID    search_btn
     Wait Until Page Contains Element    xpath=//div[@id="list_tenders"]//span[@id="ASPxLabel3"]    10
     WaitClickXPATH    (//div[@id="list_tenders"]//span[@id="ASPxLabel3"])[text()="${tender_UAid}"]/../../../../a/p    #(//p[@class='cut_title'])[last()]
+    Log To Console    click P
 
 Подати цінову пропозицію
     [Arguments]    @{ARGUMENTS}
@@ -118,9 +123,11 @@ Resource          Locators.robot
 Видалити предмет закупівлі
     [Arguments]    ${username}    ${tenderID}    ${item_id}
     aps.Пошук тендера по ідентифікатору    ${username}    ${tenderID}
-    WaitClickID    ButtonTenderEdit
+    Wait Until Page Contains Element    id=ButtonTenderEdit    10
+    Click Element    id=ButtonTenderEdit
+    #: FOR    ${INDEX}    IN RANGE    1    ${ARGUMENTS[2]}-1
     sleep    5
-    WaitClickXPATH    .//*[@id='NoLotsItemz']/div[${item_id}]
+    Click Element    xpath=.//*[@id='NoLotsItemz']/div[${item_id}]
     sleep    5
     Click Element    xpath=//div[@class="col-sm-12 text-right"]/button[2]
     Wait Until Page Contains Element    id=AddItemButton    30
@@ -134,13 +141,11 @@ Resource          Locators.robot
     Switch Browser    ${ARGUMENTS[0]}
     aps.Пошук тендера по ідентифікатору    ${ARGUMENTS[0]}    ${ARGUMENTS[1]}
     WaitClickID    ${locatorDeals}
-    sleep    2
-    WaitClickID    btnDeleteBidspan
+    WaitClickID    btnDeleteBid
     Wait Until Page Contains Element    id=addBidButton
 
 Login
     [Arguments]    @{ARGUMENTS}
-    sleep    5
     Wait Until Element Is Visible    ${locatot.cabinetEnter}    10
     Click Element    ${locatot.cabinetEnter}
     Wait Until Element Is Visible    ${locator.emailField}    10
@@ -167,9 +172,6 @@ Login
     aps.Пошук тендера по ідентифікатору    ${ARGUMENTS[0]}    ${ARGUMENTS[1]}
     WaitClickXPATH    //a[@href="#questions"]
     WaitClickID    addQuestButton
-    #Run Keyword And Ignore Error    Select From List By Label    лоту    # Вопрос к лоту с последующим выбором его
-    #Run Keyword And Ignore Error    Select From List By Label    позиції    # Вопрос к позиции \ с последующим выбором ее
-    #Run Keyword And Ignore Error    Select From List By Label    закупівлі    # Вопрос к закупке
     WaitInputID    editQuestionTitle    ${title}
     WaitInputID    editQuestionDetails    ${description}
     sleep    2
@@ -182,15 +184,22 @@ Login
     ...    ${ARGUMENTS[1]} = tenderUaId
     ...    ${ARGUMENTS[2]} = 0
     ...    ${ARGUMENTS[3]} = answer_data
-    sleep    180
     ${answer}=    Get From Dictionary    ${ARGUMENTS[3].data}    answer
     Selenium2Library.Switch Browser    ${ARGUMENTS[0]}
     aps.Пошук тендера по ідентифікатору    ${ARGUMENTS[0]}    ${ARGUMENTS[1]}
     WaitClickXPATH    //a[@href="#questions"]
-    WaitClickID    questionTitlespan1
+    #Run Keyword If    '${TEST NAME}' == 'Можливість оголосити мультилотовий тендер'    Click Element    xpath=//div[@class="col-md-5"]/p[contains(text(),"Лот 1")]
+    #Run Keyword If    '${TEST NAME}' == 'Можливість оголосити однопредметний тендер'    Click Element    css=div.panel-title > div.row > div.col-md-9
+    WaitClickXPATH    //span[@id="Label1"]
+    sleep    5
+    Capture Page Screenshot
     WaitClickID    answerQuestion
+    Capture Page Screenshot
     WaitInputID    editAnswerDetails    ${answer}
+    Capture Page Screenshot
+    Log To Console    ${answer}
     WaitClickID    AddQuestionButton
+    sleep    20
     Reload Page
     Wait Until Page Contains    ${answer}    30
 
@@ -205,12 +214,9 @@ Login
     aps.Пошук тендера по ідентифікатору    ${ARGUMENTS[0]}    ${ARGUMENTS[1]}
     WaitClickID    ${locatorDeals}
     WaitClickID    btnDeleteBid
-    WaitClickID    ${locatorDeals}
-    sleep    3
     WaitInputID    editBid    ${ARGUMENTS[3]}
     sleep    3
     WaitClickID    addBidButton
-    WaitClickID    ${locatorDeals}
     Wait Until Page Contains    Ви подали пропозицію. Очікуйте посилання на аукціон.
 
 Внести зміни в тендер
@@ -241,39 +247,41 @@ Login
     [Documentation]    ${ARGUMENTS[0]} == username
     ...    ${ARGUMENTS[1]} == file
     ...    ${ARGUMENTS[2]} == tenderId
-    Sleep    10
+    sleep    10
     Selenium2Library.Switch Browser    ${ARGUMENTS[0]}
-    Reload Page
-    WaitClickID    ${locatorDeals}
-    WaitClickID    deleteBidFileButton
-    WaitClickID    Button6
-    WaitClickID    ${locatorDeals}
+    Sleep    2
+    Click Element    id=deleteBidFileButton
+    Click Element    id=Button6
+    sleep    2
     Choose File    id=BidFileUpload    ${ARGUMENTS[1]}
     sleep    5
-    WaitClickXPATH    .//*[@id='lnkDownload'][@class="btn btn-success"]
+    Reload Page
+    Click Element    xpath=.//*[@id='lnkDownload'][@class="btn btn-success"]
 
 Отримати посилання на аукціон для глядача
     [Arguments]    @{ARGUMENTS}
-    Selenium2Library.Switch Browser    ${ARGUMENTS[0]}
     aps.Пошук тендера по ідентифікатору    ${ARGUMENTS[0]}    ${ARGUMENTS[1]}
     Wait Until Page Contains    Аукціон    5
-    ${url} =    Get Element Attribute    xpath=//a[@id="a_auction_url"]@href
+    ${url} =    Get Element Attribute    a_auction_url@href \ \
     [Return]    ${url}
 
 Отримати посилання на аукціон для учасника
     [Arguments]    @{ARGUMENTS}
-    Selenium2Library.Switch Browser    ${ARGUMENTS[0]}
+    [Documentation]    ${ARGUMENTS[0]} - tenderUID
     aps.Пошук тендера по ідентифікатору    ${ARGUMENTS[0]}    ${ARGUMENTS[1]}
     Sleep    2
-    ${url}=    Get Element Attribute    xpath=//a[@id="labelAuction2"]@href
+    ${url}=    Get Element Attribute    labelAuction2@href
     [Return]    ${url}
 
 Отримати інформацію про status
     Reload Page
-    Sleep    10
+    Sleep    5
+    Log To Console    r1
     Wait Until Page Contains Element    id=labelTenderStatus
+    Log To Console    r2
     ${value}=    Get Text    id=labelTenderStatus
-    Run Keyword If    '${TEST NAME}' == 'Можливість подати цінову пропозицію першим учасником'    Sleep    60
+    Log To Console    r3
+    # Provider
     Run Keyword And Return If    '${TEST NAME}' == 'Можливість подати цінову пропозицію першим учасником'    Active.tendering_provider    ${value}
     Run Keyword And Return If    '${TEST NAME}' == 'Можливість подати повторно цінову пропозицію першим учасником'    Active.tendering_provider    ${value}
     Run Keyword And Return If    '${TEST NAME}' == 'Можливість вичитати посилання на участь в аукціоні для першого учасника'    Active.auction_viewer    ${value}
@@ -283,13 +291,13 @@ Login
 
 Active.tendering_provider
     [Arguments]    ${value}
-    Sleep    20
+    Sleep    60
     ${return_value}=    Replace String    ${value}    Прийом пропозицій    active.tendering
     [Return]    ${return_value}
 
 Active.auction_viewer
     [Arguments]    ${value}
-    Sleep    60
+    Sleep    80
     ${return_value}=    Replace String    ${value}    Аукціон    active.auction
     [Return]    ${return_value}
 
@@ -364,16 +372,9 @@ Active.auction_viewer
     aps.Пошук тендера по ідентифікатору    ${username} \    ${tender_uaid}
     Click Element    ${locatorDeals}
     Run Keyword And Ignore Error    Click Element    xpath=.//*[@id='divLotsPropositionsSwitch']/ul/li/a[contains(text(), "${lots_ids}")]
+    #${amount}=    Get From Dictionary    ${ARGUMENTS[2].data.value}    amount
     Input Text    id=editBid    ${bid}
     Click Element    id=addBidButton
-
-Отримати інформацію із лоту
-    [Arguments]    ${username}    ${tender_uaid}    ${lot_id}    ${field_name}
-    Switch Browser    ${username}
-    Run Keyword If    '${field_name}' == 'lots.value.amount'    WaitClickXPATH    //div[@id="headingThree"]/h4/div/div/p/b[contains(text(), '${lot_id}')]
-    sleep    5
-    ${lot_value}=    Get Text    xpath=//div[@id="headingThree"]/h4/div/div/p/b[contains(text(), '${lot_id}')]/../../../..${locator.lots.${field_name}}
-    ${lot_value}=    Convert To String    ${lot_value}
-    Run Keyword And Return If    '${field_name}' == 'lots.value.amount'    lots.value.amount    ${lot_value}
-    Run Keyword And Return If    '${field_name}' == 'lots.value.AddedTaxIncluded'    valueAddedTaxIncluded    ${lot_value}
-    [Return]    ${lot_value}
+    sleep    2
+    Reload Page
+    ${resp}=    Get Value    id=my_bid_id
